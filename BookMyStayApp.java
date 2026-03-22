@@ -2,113 +2,87 @@ import java.util.*;
 
 /**
  * =========================================================================
- * CLASS - Service
+ * CLASS - BookingHistory
  * =========================================================================
- * * Use Case 7: Add-On Service Selection
- * * Description:
- * This class represents an optional service
- * that can be added to a confirmed reservation.
- * * Examples:
- * - Breakfast
- * - Spa
- * - Airport Pickup
- * * @version 7.0
+ * Use Case 8: Booking History & Reporting
+ * Description: This class maintains a record of confirmed reservations.
+ * It provides ordered storage for historical and reporting purposes.
  */
-class Service {
-    /**
-     * Name of the service.
-     */
-    private String serviceName;
+class BookingHistory {
+    /** List that stores confirmed reservations. */
+    private List<Reservation> confirmedReservations;
 
-    /**
-     * Cost of the service.
-     */
-    private double cost;
-
-    /**
-     * Creates a new add-on service.
-     * * @param serviceName name of the service
-     * @param cost cost of the service
-     */
-    public Service(String serviceName, double cost) {
-        this.serviceName = serviceName;
-        this.cost = cost;
+    /** Initializes an empty booking history. */
+    public BookingHistory() {
+        confirmedReservations = new ArrayList<>();
     }
 
-    /**
-     * @return service name
-     */
-    public String getServiceName() {
-        return serviceName;
+    /** Adds a confirmed reservation to booking history. */
+    public void addReservation(Reservation reservation) {
+        confirmedReservations.add(reservation);
     }
 
-    /**
-     * @return service cost
-     */
-    public double getCost() {
-        return cost;
+    /** Returns all confirmed reservations. */
+    public List<Reservation> getConfirmedReservations() {
+        return confirmedReservations;
     }
 }
 
-public class BookMyStayApp {
-
-    /**
-     * Maps reservation ID to selected services.
-     * * Key   -> Reservation ID
-     * Value -> List of selected services
-     */
-    private Map<String, List<Service>> servicesByReservation;
-
-    /**
-     * Initializes the service manager.
-     */
-    public BookMyStayApp() {
-        servicesByReservation = new HashMap<>();
-    }
-
-    /**
-     * Attaches a service to a reservation.
-     * * @param reservationId confirmed reservation ID
-     * @param service add-on service
-     */
-    public void addService(String reservationId, Service service) {
-        // If the reservation doesn't exist in the map, create a new list
-        servicesByReservation.putIfAbsent(reservationId, new ArrayList<>());
-        // Add the service to the list associated with the ID
-        servicesByReservation.get(reservationId).add(service);
-    }
-
-    /**
-     * Calculates total add-on cost
-     * for a reservation.
-     * * @param reservationId reservation ID
-     * @return total service cost
-     */
-    public double calculateTotalServiceCost(String reservationId) {
-        double total = 0.0;
-        List<Service> services = servicesByReservation.get(reservationId);
-        
-        if (services != null) {
-            for (Service s : services) {
-                total += s.getCost();
-            }
+/**
+ * =========================================================================
+ * CLASS - BookingReportService
+ * =========================================================================
+ * Description: This class generates reports from booking history data.
+ * Reporting logic is separated from data storage.
+ */
+class BookingReportService {
+    /** Displays a summary report of all confirmed bookings. */
+    public void generateReport(BookingHistory history) {
+        System.out.println("Booking History Report");
+        for (Reservation res : history.getConfirmedReservations()) {
+            System.out.println("Guest: " + res.getGuestName() + ", Room Type: " + res.getRoomType());
         }
-        return total;
+    }
+}
+
+/**
+ * Supporting class based on the reporting requirements.
+ */
+class Reservation {
+    private String guestName;
+    private String roomType;
+
+    public Reservation(String guestName, String roomType) {
+        this.guestName = guestName;
+        this.roomType = roomType;
     }
 
-    /**
-     * Main method to demonstrate the functionality based on the provided output image.
-     */
+    public String getGuestName() { return guestName; }
+    public String getRoomType() { return roomType; }
+}
+
+/**
+ * =========================================================================
+ * MAIN CLASS - UseCase8BookingHistoryReport
+ * =========================================================================
+ * Description: This class demonstrates how confirmed bookings are stored and reported.
+ * The system maintains an ordered audit trail of reservations.
+ */
+public class BookMyStayApp {
+    /** Application entry point. */
     public static void main(String[] args) {
-        BookMyStayApp manager = new BookMyStayApp();
-        String resId = "Single-1";
+        System.out.println("Booking History and Reporting\n");
 
-        // Example data to reach the 1500.0 total shown in your image
-        manager.addService(resId, new Service("Spa", 1000.0));
-        manager.addService(resId, new Service("Breakfast", 500.0));
+        // Initialize history and report service
+        BookingHistory history = new BookingHistory();
+        BookingReportService reportService = new BookingReportService();
 
-        System.out.println("Add-On Service Selection");
-        System.out.println("Reservation ID: " + resId);
-        System.out.println("Total Add-On Cost: " + manager.calculateTotalServiceCost(resId));
+        // Adding data to match the provided output image
+        history.addReservation(new Reservation("Abhi", "Single"));
+        history.addReservation(new Reservation("Subha", "Double"));
+        history.addReservation(new Reservation("Vanmathi", "Suite"));
+
+        // Generate the report
+        reportService.generateReport(history);
     }
 }
