@@ -1,149 +1,135 @@
-import java.util.Scanner;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Stack;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * =========================================================================
- * CLASS - InvalidBookingException
+ * CLASS - CancellationService
  * =========================================================================
- * * Use Case 9: Error Handling & Validation
- * * Description:
- * This custom exception represents
- * invalid booking scenarios in the system.
- * * Using a domain-specific exception
- * makes error handling clearer and safer.
- * * @version 9.0
+ *
+ * Use Case 10: Booking Cancellation & Inventory Rollback
+ *
+ * Description:
+ * This class is responsible for handling booking cancellations.
+ *
+ * It ensures that:
+ * - Cancelled room IDs are tracked
+ * - Inventory is restored correctly
+ * - Invalid cancellations are prevented
+ *
+ * A stack is used to model rollback behavior.
+ *
+ * @version 10.0
  */
-class InvalidBookingException extends Exception {
+class CancellationService {
+
+    /** Stack that stores recently released room IDs. */
+    private Stack<String> releasedRoomIds;
+
+    /** Maps reservation ID to room type. */
+    private Map<String, String> reservationRoomTypeMap;
+
+    /** Initializes the cancellation service. */
+    public CancellationService() {
+        releasedRoomIds = new Stack<>();
+        reservationRoomTypeMap = new HashMap<>();
+    }
 
     /**
-     * Creates an exception with
-     * a descriptive error message.
-     * * @param message error description
+     * Registers a confirmed booking for potential cancellation.
+     *
+     * @param reservationId reservation ID
+     * @param roomType type of room booked
      */
-    public InvalidBookingException(String message) {
-        super(message);
+    public void registerBooking(String reservationId, String roomType) {
+        reservationRoomTypeMap.put(reservationId, roomType);
     }
-}
-
-/**
- * Supporting class: RoomInventory
- * (Required for the validate method parameters)
- */
-class RoomInventory {
-    private List<String> validTypes;
-
-    public RoomInventory() {
-        validTypes = new ArrayList<>();
-        validTypes.add("Single");
-        validTypes.add("Double");
-        validTypes.add("Suite");
-    }
-
-    public boolean isValidType(String type) {
-        // Matches the screenshot requirement where "single" (lowercase) fails
-        return validTypes.contains(type);
-    }
-}
-
-/**
- * Supporting class: BookingRequestQueue
- * (Required for the main method initialization)
- */
-class BookingRequestQueue {
-    public void addRequest(String name, String type) {
-        // Implementation for adding to queue
-    }
-}
-
-/**
- * =========================================================================
- * CLASS - ReservationValidator
- * =========================================================================
- * * Use Case 9: Error Handling & Validation
- * * Description:
- * This class is responsible for validating
- * booking requests before they are processed.
- * * All validation rules are centralized
- * to avoid duplication and inconsistency.
- * * @version 9.0
- */
-class ReservationValidator {
 
     /**
-     * Validates booking input provided by the user.
-     * * @param guestName name of the guest
-     * @param roomType requested room type
+     * Cancels a confirmed booking and restores inventory safely.
+     *
+     * @param reservationId reservation ID
      * @param inventory centralized inventory
-     * @throws InvalidBookingException if validation fails
      */
-    public void validate(
-            String guestName, 
-            String roomType, 
-            RoomInventory inventory
-    ) throws InvalidBookingException {
-        
-        // Validation logic to trigger the error seen in the screenshot
-        if (!inventory.isValidType(roomType)) {
-            throw new InvalidBookingException("Invalid room type selected.");
+    public void cancelBooking(String reservationId, RoomInventory inventory) {
+        String roomType = reservationRoomTypeMap.get(reservationId);
+
+        if (roomType != null) {
+            // Restore inventory
+            inventory.updateAvailability(roomType, 1);
+            // Track released room in stack
+            releasedRoomIds.push(reservationId);
+            System.out.println("Booking cancelled successfully.");
+        } else {
+            System.out.println("Error: Reservation ID not found.");
+        }
+    }
+
+    /**
+     * Displays recently cancelled reservations (Rollback History).
+     */
+    public void showRollbackHistory() {
+        System.out.println("\nRollback History (Most Recent First):");
+        if (releasedRoomIds.isEmpty()) {
+            System.out.println("No recent cancellations.");
+        } else {
+            // Stack provides LIFO (Last-In, First-Out) order
+            for (int i = releasedRoomIds.size() - 1; i >= 0; i--) {
+                System.out.println("Released Reservation ID: " + releasedRoomIds.get(i));
+            }
         }
     }
 }
 
 /**
+ * Supporting RoomInventory class (as required by method parameters)
+ */
+class RoomInventory {
+    private Map<String, Integer> inventory = new HashMap<>();
+
+    public RoomInventory() {
+        inventory.put("Single", 5);
+    }
+
+    public void updateAvailability(String type, int delta) {
+        inventory.put(type, inventory.getOrDefault(type, 0) + delta);
+    }
+    
+    public int getAvailability(String type) {
+        return inventory.getOrDefault(type, 0);
+    }
+}
+
+/**
  * =========================================================================
- * MAIN CLASS - UseCase9ErrorHandlingValidation
+ * MAIN CLASS - UseCase10CancellationRollback
  * =========================================================================
- * * Use Case 9: Error Handling & Validation
- * * Description:
- * This class demonstrates how user input
- * is validated before booking is processed.
- * * The system:
- * - Accepts user input
- * - Validates input centrally
- * - Handles errors gracefully
- * * @version 9.0
+ *
+ * Description:
+ * This class demonstrates how bookings are cancelled
+ * and inventory is restored using a Stack.
+ *
+ * @version 10.0
  */
 public class BookMyStayApp {
 
-    /**
-     * Application entry point.
-     * * @param args Command-line arguments
-     */
     public static void main(String[] args) {
-        
-        // Display application header
-        System.out.println("Booking Validation");
-        
-        Scanner scanner = new Scanner(System.in);
+        System.out.println("Booking Cancellation");
 
-        // Initialize required components
+        // Initialize components
         RoomInventory inventory = new RoomInventory();
-        ReservationValidator validator = new ReservationValidator();
-        BookingRequestQueue bookingQueue = new BookingRequestQueue();
+        CancellationService cancelService = new CancellationService();
 
-        try {
-            // Manual input prompts to match the terminal output image
-            System.out.print("Enter guest name: ");
-            String guestName = scanner.nextLine();
-            
-            System.out.print("Enter room type (Single/Double/Suite): ");
-            String roomType = scanner.nextLine();
+        // Simulate a booking record
+        String resId = "Single-1";
+        cancelService.registerBooking(resId, "Single");
 
-            // Perform Validation
-            validator.validate(guestName, roomType, inventory);
+        // Perform cancellation (matches terminal output)
+        cancelService.cancelBooking(resId, inventory);
 
-            // If valid, add to queue
-            bookingQueue.addRequest(guestName, roomType);
-
-        } catch (InvalidBookingException e) {
-            
-            // Handle domain-specific validation errors
-            System.out.println("Booking failed: " + e.getMessage());
-            
-        } finally {
-            // Ensure resource is closed
-            scanner.close();
-        }
+        // Display rollback history
+        cancelService.showRollbackHistory();
+        
+        System.out.println("\nUpdated Inventory: " + inventory.getAvailability("Single"));
     }
 }
